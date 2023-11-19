@@ -1,0 +1,44 @@
+Term	GardaPeople	Courts	Crime	CrimeCat1	CrimeCat2	CrimeCat3	CrimeCat4	CrimeCat5	CrimeCat6	CrimeCat7	CrimeCat8	CrimeCat9	CrimeCat10	CrimeCat11	CrimeCat12	CrimeCat13	CrimeCat14	CrimeCat15
+Theft			Crime								CrimeCat8							
+Fraud			Crime									CrimeCat9						
+deception			Crime									CrimeCat9						
+robery			Crime									CrimeCat9						
+extortion			Crime									CrimeCat9						
+hijacking			Crime															
+homicide			Crime	CrimeCat1														
+murder			Crime	CrimeCat1														
+bodily harm			Crime			CrimeCat3												
+dangerous driving			Crime				CrimeCat4											
+speeding			Crime				CrimeCat4											
+sexual offence			Crime		CrimeCat2													
+sexual assault			Crime		CrimeCat2													
+rape			Crime		CrimeCat2													
+controlled substances			Crime										CrimeCat10					
+narcotics			Crime										CrimeCat10					
+burglary			Crime							CrimeCat7								
+drug smuggling			Crime										CrimeCat10					
+road traffic offence			Crime															
+public order			Crime													CrimeCat12		
+Commissioner	GardaPeople																	
+Assistant Commissioner	GardaPeople																	
+Deputy Commissioner	GardaPeople																	
+Chief Superintendent	GardaPeople																	
+Superintendent	GardaPeople																	
+Garda	GardaPeople																	
+Sergeant	GardaPeople																	
+Drew Harris	GardaPeople																	
+John Ferris	GardaPeople																	
+garda station	GardaPeople																	
+Inspector	GardaPeople																	
+John Twomey	GardaPeople																	
+Patrick Leahy	GardaPeople																	
+Fintan Fanning	GardaPeople																	
+David Sheahan	GardaPeople																	
+Barry O'Brien	GardaPeople																	
+Michael O'Sullivan	GardaPeople																	
+Anne McMahon	GardaPeople																	
+Michael Finn	GardaPeople																	
+John O'Driscoll	GardaPeople																	
+Orla McPartlin	GardaPeople																	
+High Court		Courts																
+District Court		Courts																
