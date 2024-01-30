@@ -85,10 +85,36 @@ def calculate_sentiment(tokens, dictionary, column_names, terms_french):
     positive_keys = ['Positive', 'FinPos', 'Positiv']
     negative_keys = ['Negative', 'FinNeg', 'Negativ']
 
+    # dictionary to prioritise multi-tokens when they are triggered in the same place in the text as
+        # as a unitoken
+    multitoken_pos = set()
+    pos_multi = 0
+    # Check for multi-token phrases and update sentiment scores
+    for token_index, token in enumerate(tokens):
+        for i in range(4, 0, -1):  # Adjust the range as needed
+            if token_index - i >= 0:
+                multi_token = " ".join(tokens[token_index - i:token_index + 1])
+                if multi_token in terms_french:
+                    multitoken_pos.update(range(token_index - i, token_index + 1))
+                    term_index = terms_french.index(multi_token)
+                    for column in column_names:
+                        if dictionary.at[term_index, column] == column:
+                            sentiment_scores[column] += 1
+
+                            # Check if the category is positive or negative and increment the counts accordingly
+                            if any(key in column for key in positive_keys):
+                                positive_count += 1
+                            elif any(key in column for key in negative_keys):
+                                negative_count += 1
+                                #print(f"negative: {multi_token}")
+        pos_multi += +1
+
+    pos_uni = 0
     # Iterate over each token
-    for token in tokens:
+    for token_index, token in enumerate(tokens):
+        #print(f"token: {token}, pos uni: {pos_uni}, pos multi: {multitoken_pos}")
         # Check if the token is present in the terms_french list
-        if token in terms_french:
+        if token in terms_french and pos_uni not in multitoken_pos:
             # Get the index of the token in the terms_french list
             term_index = terms_french.index(token)
             # Increment sentiment scores for all respective categories
@@ -99,8 +125,11 @@ def calculate_sentiment(tokens, dictionary, column_names, terms_french):
                     # Check if the category is positive or negative and increment the counts accordingly
                     if any(key in column for key in positive_keys):
                         positive_count += 1
+                        print(f"positive: {token}")
                     elif any(key in column for key in negative_keys):
                         negative_count += 1
+                        #print(f"negative: {token}")
+        pos_uni += 1
 
     # Calculate an overall sentiment score based on the difference between positive and negative terms
     sentiment_scores["positive"] = sum(sentiment_scores.get(key, 0) for key in positive_keys)
@@ -117,7 +146,7 @@ corpus = CorpusLexisNexis('./DATA/')
 data_repo = "C:/Users/josep/PycharmProjects/CapstoneProject/DATA"
 file_names = os.listdir(data_repo)
 # Create corpus based on data
-corpus_data = corpus.create_corpus(file_names[25:26])
+corpus_data = corpus.create_corpus(file_names)
 
 dictionaries_folder = 'Dictionaries/'
 dictionary_files = os.listdir(dictionaries_folder)
