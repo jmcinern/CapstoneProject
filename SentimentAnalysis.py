@@ -1,62 +1,88 @@
 import os
-import nltk
-from nltk.tokenize import word_tokenize
 from CorpusLexisNexis import CorpusLexisNexis
 import pandas as pd
+import pickle
+# Class used to format and normalize dictionaries (lemmatisation).
+from DictionaryPreprocessing import (
+    load_format_Loughran_McDonald_Dic,
+    load_format_lexicoder,
+    load_format_Feel
+)
 
-# Download the 'punkt' resource
-nltk.download('punkt')
 
-
-# Funcition to find the longest french term (number of spaces) for match and search with tokens in text
+# Use pickle to serialize corpus to prevent creating it each time running the SA
+def load_create_corpus(corpus_data_file, data_repo):
+    if os.path.exists(corpus_data_file):
+        with open(corpus_data_file, 'rb') as f:
+            corpus_data = pickle.load(f)
+    else:
+        corpus = CorpusLexisNexis(data_repo)
+        file_names = os.listdir(data_repo)
+        corpus_data = corpus.create_corpus(file_names)
+        with open(corpus_data_file, 'wb') as f:
+            pickle.dump(corpus_data, f)
+    return corpus_data
 
 
 def sentiment_analysis(corpus, dict_path, output_folder='output'):
-    # Open the dictionary file
-    dictionary = pd.read_excel(dict_path)
-    column_names = list(dictionary.columns)
+
+    if 'Lough' in dict_path:
+        dictionary = load_format_Loughran_McDonald_Dic(dict_path)
+    elif 'FEEL' in dict_path:
+        dictionary = load_format_Feel(dict_path)
+    elif 'lexi' in dict_path:
+        dictionary = load_format_lexicoder(dict_path)
+    else:
+        dictionary = pd.read_excel(dict_path)
 
     # Extract and normalize French terms once to reduce time complexity.
     terms_french = dictionary.iloc[:, 1].dropna().tolist()
     terms_french = [item.lower() for item in terms_french]
+    sentiment_for_terms = []
+    for idx, rows in dictionary.iterrows():
+        if dictionary.at[idx, "Positive"] == "Positive":
+            sentiment_for_terms.append("Positive")
+        elif dictionary.at[idx, "Negative"] == "Negative":
+            sentiment_for_terms.append("Negative")
+        else:
+            sentiment_for_terms.append("None")
+
+    # Create dictionary of French words (key) and their corresponding sentiment score (value)
+    french_sentiment = {terms_french[i]: sentiment_for_terms[i] for i in range(len(terms_french))}
 
     # Create a list to store sentiment scores and counts of positive and negative words
     time_series_data = []
 
+
     # Iterate through articles in the corpus
     for country, articles in corpus.items():
         for article in articles:
-            text = article["text"]
+            tokens = article["tokens"]
             date = article["date"]
             newspaper = article["newspaper"]
             num_tokens = article["num_tokens"]
             title = article["title"]
 
-            # Tokenize the text
-            tokens = []
-            for sentence in text:
-                tokens.extend(word_tokenize(sentence.lower()))
-
             # Perform sentiment analysis using the dictionary
-            sentiment_scores, positive_count, negative_count = calculate_sentiment(tokens,
-                                                                                   dictionary,
-                                                                                   column_names,
-                                                                                   terms_french)
+            sentiment_score, positive_count, negative_count, positive_words, negative_words = calculate_sentiment(tokens, french_sentiment)
 
             # Normalize sentiment scores by article length
-            for key in sentiment_scores:
-                sentiment_scores[key] /= num_tokens
+            sentiment_normalized = sentiment_score / num_tokens
+
 
             # Append selected information to the time series data
             time_series_data.append({
                 "Country": country,
                 "Newspaper": newspaper,
-                "title": title,
-                "sentiment": sentiment_scores["overall"],
-                "date": date,
-                "num_tokens": num_tokens,
-                "positive_count": positive_count,
-                "negative_count": negative_count
+                "Title": title,
+                "Sentiment": sentiment_normalized,
+                "Date": date,
+                "Num_tokens": num_tokens,
+                "Positive_count": positive_count,
+                "Negative_count": negative_count,
+                "Tokens": tokens,
+                "Positive_Words": positive_words,
+                "Negative_Words": negative_words
             })
 
     # Convert time_series_data to a DataFrame for easier manipulation
@@ -68,92 +94,97 @@ def sentiment_analysis(corpus, dict_path, output_folder='output'):
     # Write the selected columns to a CSV file
     output_file_path = os.path.join(output_folder, f'sentiment_analysis_results_{os.path.basename(dict_path)}.csv')
     time_series_df.to_csv(output_file_path, index=False,
-                          columns=["Country", "Newspaper", "title", "sentiment", "date", "num_tokens", "positive_count",
-                                   "negative_count"],
+                          columns=["Country", "Newspaper", "Title", "Sentiment", "Date", "Num_tokens", "Positive_count",
+                                   "Negative_count"],
                           encoding='utf-8-sig')
 
     return corpus, time_series_data
 
 
-def calculate_sentiment(tokens, dictionary, column_names, terms_french):
-    # Initialize sentiment scores and counts
-    sentiment_scores = {column: 0 for column in column_names}
+# tokens : list of tokens in article,
+# fr_sentiment : dictionary - keys: french terms, values: sentiment score ('Negative'/'Positive')
+def calculate_sentiment(tokens, fr_sentiment):
     positive_count = 0
     negative_count = 0
+    positive_words = []
+    negative_words = []
+    for token in tokens:
+        # print(f"TOKEN: {token}")
+        # sentiment = "None" if no token found, otherwise "Negative"/"Positive"
+        sentiment = fr_sentiment.get(token, "None")
+        # update sentiment polarity counts
+        if sentiment == "Positive":
+            # print(f"{token} is positive")
+            positive_count += 1
+            positive_words.append(token)
+        elif sentiment == "Negative":
+            # print(f"{token} is negative")
+            negative_count += 1
+            negative_words.append(token)
+        elif sentiment != "None":
+            print("error accessing sentiment score in french_sentiment dictionary")
 
-    # Define positive and negative keys
-    positive_keys = ['Positive', 'FinPos', 'Positiv']
-    negative_keys = ['Negative', 'FinNeg', 'Negativ']
+    # Calculate sentiment score as the difference between the number of positive and negative tokens, score will be
+    # positive if more positive tokens and negative if more negative tokens.
+    sentiment_score = positive_count - negative_count
+    # print(sentiment_score)
 
-    # dictionary to prioritise multi-tokens when they are triggered in the same place in the text as
-        # as a unitoken
-    multitoken_pos = set()
-    pos_multi = 0
-    # Check for multi-token phrases and update sentiment scores
-    for token_index, token in enumerate(tokens):
-        for i in range(4, 0, -1):  # Adjust the range as needed
-            if token_index - i >= 0:
-                multi_token = " ".join(tokens[token_index - i:token_index + 1])
-                if multi_token in terms_french:
-                    multitoken_pos.update(range(token_index - i, token_index + 1))
-                    term_index = terms_french.index(multi_token)
-                    for column in column_names:
-                        if dictionary.at[term_index, column] == column:
-                            sentiment_scores[column] += 1
+    return sentiment_score, positive_count, negative_count, positive_words, negative_words
 
-                            # Check if the category is positive or negative and increment the counts accordingly
-                            if any(key in column for key in positive_keys):
-                                positive_count += 1
-                            elif any(key in column for key in negative_keys):
-                                negative_count += 1
-                                #print(f"negative: {multi_token}")
-        pos_multi += +1
+def show_SA(corpus_with_sentiment, dict_path):
+    dict_path = os.path.basename(dict_path)
 
-    pos_uni = 0
-    # Iterate over each token
-    for token_index, token in enumerate(tokens):
-        #print(f"token: {token}, pos uni: {pos_uni}, pos multi: {multitoken_pos}")
-        # Check if the token is present in the terms_french list
-        if token in terms_french and pos_uni not in multitoken_pos:
-            # Get the index of the token in the terms_french list
-            term_index = terms_french.index(token)
-            # Increment sentiment scores for all respective categories
-            for column in column_names:
-                if dictionary.at[term_index, column] == column:
-                    sentiment_scores[column] += 1
-
-                    # Check if the category is positive or negative and increment the counts accordingly
-                    if any(key in column for key in positive_keys):
-                        positive_count += 1
-                        print(f"positive: {token}")
-                    elif any(key in column for key in negative_keys):
-                        negative_count += 1
-                        #print(f"negative: {token}")
-        pos_uni += 1
-
-    # Calculate an overall sentiment score based on the difference between positive and negative terms
-    sentiment_scores["positive"] = sum(sentiment_scores.get(key, 0) for key in positive_keys)
-    sentiment_scores["negative"] = sum(sentiment_scores.get(key, 0) for key in negative_keys)
-    sentiment_scores["overall"] = sentiment_scores["positive"] - sentiment_scores["negative"]
-
-    return sentiment_scores, positive_count, negative_count
+    for i in range(10):
+        SA_representation = pd.DataFrame({
+            "Title": [],
+            "Sentiment": [],
+            "Text": [],
+            "Positive_Words": [],
+            "Negative_Words": []
+        })
+        titles = []
+        sentiments = []
+        texts = []
+        pos_words = []
+        neg_words = []
+        corpus, TS = corpus_with_sentiment
+        for row in TS:
+            text = row['Tokens']
+            text = " ".join(text)
+            titles.append(row['Title'])
+            sentiments.append(row['Sentiment'])
+            texts.append(text)
+            pos_words.append(row['Positive_Words'])
+            neg_words.append(row['Negative_Words'])
 
 
-# run code
-corpus = CorpusLexisNexis('./DATA/')
-# List of corpus files by country
-# Repository where papers are stored.
+        SA_representation['Title'] = titles
+        SA_representation['Text'] = texts
+        SA_representation['Sentiment'] = sentiments
+        SA_representation['Positive_Words'] = pos_words
+        SA_representation['Negative_Words'] = neg_words
+
+        SA_representation.to_csv("./Display/Display10"+dict_path+".csv", encoding='utf-8-sig')
+
+
+'''
+corpus_data_file = 'corpus_data.pkl'
 data_repo = "C:/Users/josep/PycharmProjects/CapstoneProject/DATA"
-file_names = os.listdir(data_repo)
-# Create corpus based on data
-corpus_data = corpus.create_corpus(file_names)
+corpus_data = load_create_corpus(corpus_data_file, data_repo)
 
-dictionaries_folder = 'Dictionaries/'
-dictionary_files = os.listdir(dictionaries_folder)
-excel_files = [file for file in dictionary_files if file.endswith('.xlsx')]
-dictionary_paths = [os.path.join(dictionaries_folder, file) for file in excel_files]
+LM_pkl = "Loughran-McDonald.pkl"
+FEEL_pkl = "FEEL.pkl"
+InqB = "./Dictionaries/inquirerbasic_fr.xlsx"
+Oil = "./Dictionaries/OIL_ECON_FR.xlsx"
+Lexicoder = "lexicoder.pkl"
+dic_paths = [LM_pkl, FEEL_pkl, InqB, Oil, Lexicoder]
 
-for dict_path in dictionary_paths:
-    if 'OIL' in dict_path:
-        print(dict_path)
-        corpus_with_sentiment = sentiment_analysis(corpus_data, dict_path)
+
+for dict_path in dic_paths:
+    corpus_with_sentiment = sentiment_analysis(corpus_data, dict_path)
+#show_SA(corpus_with_sentiment, dict_path)
+'''
+
+
+
+

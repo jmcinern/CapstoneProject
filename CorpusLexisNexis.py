@@ -1,16 +1,18 @@
 import datetime
 import os
 import re
+import spacy
 class CorpusLexisNexis:
+
     def __init__(self, data_location):
         #Get paper names based on file names
         paper_names = []
         # Repository where papers are stored.
-        data_repo = "C:/Users/josep/PycharmProjects/CapstoneProject/DATA"
+        data_repo = "C:/Users/josep/PycharmProjects/CapstoneProject/Data"
         file_names = os.listdir(data_repo)
         for fn in file_names:
             country_paper = (fn.split("_"))
-            paper = country_paper[1]
+            paper = country_paper[1].rstrip(".txt")
             paper_names.append(paper)
 
         self.data_location = data_location
@@ -34,7 +36,11 @@ class CorpusLexisNexis:
         # Check if the word represents a year
         return word.isdigit() and len(word) == 4
 
-    def _files_to_corpus(self, file_name):
+    def _files_to_corpus(self, file_name, nlp):
+        # Use list of France related words to only add articles with these words in title.
+        france_related_words = ['france', 'hexagone', 'paris', 'macron', 'marseille', 'français', 'française',
+                                'françaises', 'franco']
+        title_list = []
         file_path = os.path.join(self.data_location, file_name)
 
         # Dictionary to map French month names to numeric values
@@ -52,6 +58,8 @@ class CorpusLexisNexis:
 
         # Open the TXT file for reading
         with open(file_path, 'r', encoding='utf-8') as file:
+            france_related_title = False
+            duplicate_title = True
             lines = file.readlines()
             num_lines = len(lines)
 
@@ -82,7 +90,7 @@ class CorpusLexisNexis:
                     if title == "":
                         title_index = max(0, line_index - 2)
                         title = lines[title_index].strip()
-
+                        title_list.append(title)
                     newspaper = line
 
                     # Move to the next line to get the date
@@ -110,6 +118,10 @@ class CorpusLexisNexis:
                                                                  '%Y-%m-%d')
                         date = date_object.strftime('%d/%m/%Y')
 
+                    # Check if any France-related word is present in the title
+                    if any(word in title.lower() for word in france_related_words) and title not in title_list:
+                        france_related_title = True
+                        duplicate_title = False
 
                 if line == 'Body':
                     # Initialize the text list for the article and set in_body to True
@@ -119,33 +131,49 @@ class CorpusLexisNexis:
                 if in_body:
                     if line == 'End of Document':
                         # It indicates the end of an article
-                        article = {
-                            "text": text,
-                            "title": title,
-                            "newspaper": newspaper,
-                            "date": date,
-                            "num_tokens": num_tokens,
-                        }
-                        articles.append(article)
+                        if france_related_title and not duplicate_title:
+                            #tokenize text when building corpus to avoid having to do it every time the SA is run
+                            # Tokenize the text using spacy NLP model
+                            text = " ".join(text)
+                            doc = nlp(text)
+                            tokens = []
+
+                            for token in doc:
+                                if not token.is_space:
+                                    # Lemmatise token : token: arrêté
+                                    #                   lemma: arrêter
+                                    lemma = token.lemma_.lower()
+                                    tokens.append(lemma)
+                            article = {
+                                "tokens": tokens,
+                                "title": title,
+                                "newspaper": newspaper,
+                                "date": date,
+                                "num_tokens": num_tokens,
+                            }
+                            articles.append(article)
+                            france_related_title = False
+
                         in_body = False
                     else:
                         # Append lines to the text list if inside 'Body'
                         text.append(line)
-
         return articles
 
     def create_corpus(self, file_names):
         corpus = {}
+        # NLP language model trained on french news data.
+        nlp = spacy.load("fr_core_news_sm")
 
         for fn in file_names:
             country_paper = fn.split("_")
             country = country_paper[0]
-            articles = self._files_to_corpus(fn)
+            articles = self._files_to_corpus(fn, nlp)
             # If the country key already exists in the corpus, append the articles to the existing list
             if country in corpus:
                 corpus[country].extend(articles)
             else:
                 corpus[country] = articles
-
+        print('Corpus created')
         return corpus
 
