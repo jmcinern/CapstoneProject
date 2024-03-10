@@ -2,9 +2,12 @@ import pickle
 import os
 import pandas as pd
 import spacy
+import re
 
 # Function that lemmatizes the French words using spaCy lemmatisation.
 nlp = spacy.load("fr_core_news_sm")
+stopwords = nlp.Defaults.stop_words
+#print(stopwords)
 
 # Set of functions that convert dictionaries to General Inquirer format. With Columns:
 # English word, French word, Positive, Negative
@@ -12,7 +15,6 @@ nlp = spacy.load("fr_core_news_sm")
 def LMcD_to_GI():
     # Read Loughran-McDonald dictionary
     dictionary = pd.read_excel("./Dictionaries/Loughran-McDonald_DIC.xlsx")
-    print('converting lm to gi')
     # Iterate over each row
     for index, row in dictionary.iterrows():
         # remove multitoken terms
@@ -21,7 +23,6 @@ def LMcD_to_GI():
             for col in ['Negative', 'Positive']:
                 # If value is not 0, replace it with the column name
                 if row[col] != 0:
-                    print('senitment maxxxin')
                     dictionary.at[index, col] = col
 
     return dictionary
@@ -90,39 +91,41 @@ def lemmatise_dic(dic_formatted, nlp):
     # French words in first col
     french_words = dic_formatted.iloc[:, 1].tolist()
     # to string
-    french_words_text = " ".join(french_words)
+    french_words_text = " ".join(str(word) for word in french_words)
     # tokenise
     doc = nlp(french_words_text)
     for term in french_words:
+        term = str(term)
+
+
+        # Tokenise using spaCy
         term_tokenized = nlp(term)
-        if len(term_tokenized) == 1:
+        if len(term_tokenized) < 6:
+            french_term = []
             # lemmatise the single token, loop just to make sure that token is of type spaCy token
-                for token in term_tokenized:
-                    lemma = token.lemma_.lower()
-                    print(f"lemma: {lemma}")
-                    # print(f"lemma: {lemma}")
-                    french_words_lemmatised.append(lemma)
-        # remove multitoken term from dictionary
+            for token in term_tokenized:
+                lemma = token.lemma_.lower()
+                french_term.append(lemma)
+            # join back multitoken terms
+            french_term = " ".join(french_term)
+            french_words_lemmatised.append(french_term)
+        # remove terms of over 5 tokens from dictionary
         else:
-            french_words_lemmatised.append("multitokenremoved")
+            french_words_lemmatised.append("bigtermremoved")
     # replace original column with lemmatised column
     dic_formatted.iloc[:, 1] = french_words_lemmatised
     dic_formatted_and_lemmatised = dic_formatted
-    print('Outputting dic to display')
-    dic_formatted_and_lemmatised.to_csv("./Display/testLemma")
     return dic_formatted_and_lemmatised
 
 
 
 # Set of functions that serialise the GI formatted dictionaries to avoid having to format them each time the
 # sentiment analysis is run.
-def load_format_Loughran_McDonald_Dic(dic_fpath):
+def load_format_lemmatise_Loughran_McDonald_Dic(dic_fpath):
     if os.path.exists(dic_fpath):
-        print('pkl already exists')
         with open(dic_fpath,'rb') as f:
             dic_formatted = pickle.load(f)
     else:
-        print('preprosseing dic')
         # format
         dic_formatted = LMcD_to_GI()
         # lemmatise
@@ -131,7 +134,7 @@ def load_format_Loughran_McDonald_Dic(dic_fpath):
             pickle.dump(dic_lemmatised_and_formatted, f)
     return dic_formatted
 
-def load_format_Feel(dic_fpath):
+def load_format_lemmatise_Feel(dic_fpath):
     if os.path.exists(dic_fpath):
         with open(dic_fpath,'rb') as f:
             dic_formatted = pickle.load(f)
@@ -142,7 +145,7 @@ def load_format_Feel(dic_fpath):
             pickle.dump(dic_lemmatised_and_formatted, f)
     return dic_formatted
 
-def load_format_lexicoder(dic_fpath):
+def load_format_lemmatise_lexicoder(dic_fpath):
     if os.path.exists(dic_fpath):
         with open(dic_fpath,'rb') as f:
             dic_formatted = pickle.load(f)
@@ -152,6 +155,31 @@ def load_format_lexicoder(dic_fpath):
         with open(dic_fpath, 'wb') as f:
             pickle.dump(dic_lemmatised_and_formatted, f)
     return dic_formatted
+
+def load_lemmatise_GI(dic_fpath):
+    if os.path.exists(dic_fpath):
+        with open(dic_fpath,'rb') as f:
+            dic_lemmatised = pickle.load(f)
+    else:
+        dictionary = pd.read_excel("./Dictionaries/inquirerbasic_fr.xlsx")
+        dic_lemmatised = lemmatise_dic(dictionary, nlp)
+        with open(dic_fpath, 'wb') as f:
+            pickle.dump(dic_lemmatised, f)
+    return dic_lemmatised
+
+
+def load_lemmatise_Oil_Econ(dic_fpath):
+    if os.path.exists(dic_fpath):
+        with open(dic_fpath, 'rb') as f:
+            dic_lemmatised = pickle.load(f)
+    else:
+        dictionary = pd.read_excel("./Dictionaries/OIL_ECON_FR.xlsx")
+        dic_lemmatised = lemmatise_dic(dictionary, nlp)
+        with open(dic_fpath, 'wb') as f:
+            pickle.dump(dic_lemmatised, f)
+    return dic_lemmatised
+
+
 
 
 #load_format_Loughran_McDonald_Dic("Loughran-McDonald.pkl")

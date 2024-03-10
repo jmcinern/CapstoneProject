@@ -38,8 +38,7 @@ class CorpusLexisNexis:
 
     def _files_to_corpus(self, file_name, nlp):
         # Use list of France related words to only add articles with these words in title.
-        france_related_words = ['france', 'hexagone', 'paris', 'macron', 'marseille', 'français', 'française',
-                                'françaises', 'franco']
+        france_related_words = ['france', 'hexagone', 'paris', 'macron', 'marseille', 'français', 'française', 'françaises', 'franco']
         title_list = []
         file_path = os.path.join(self.data_location, file_name)
 
@@ -127,7 +126,8 @@ class CorpusLexisNexis:
                     # Initialize the text list for the article and set in_body to True
                     text = []
                     in_body = True
-
+                    # Use continue key word to skip adding word Body to text list.
+                    continue
                 if in_body:
                     if line == 'End of Document':
                         # It indicates the end of an article

@@ -4,9 +4,11 @@ import pandas as pd
 import pickle
 # Class used to format and normalize dictionaries (lemmatisation).
 from DictionaryPreprocessing import (
-    load_format_Loughran_McDonald_Dic,
-    load_format_lexicoder,
-    load_format_Feel
+    load_format_lemmatise_Loughran_McDonald_Dic,
+    load_format_lemmatise_lexicoder,
+    load_format_lemmatise_Feel,
+    load_lemmatise_GI,
+    load_lemmatise_Oil_Econ
 )
 
 
@@ -27,13 +29,18 @@ def load_create_corpus(corpus_data_file, data_repo):
 def sentiment_analysis(corpus, dict_path, output_folder='output'):
 
     if 'Lough' in dict_path:
-        dictionary = load_format_Loughran_McDonald_Dic(dict_path)
+        dictionary = load_format_lemmatise_Loughran_McDonald_Dic(dict_path)
     elif 'FEEL' in dict_path:
-        dictionary = load_format_Feel(dict_path)
+        dictionary = load_format_lemmatise_Feel(dict_path)
     elif 'lexi' in dict_path:
-        dictionary = load_format_lexicoder(dict_path)
+        dictionary = load_format_lemmatise_lexicoder(dict_path)
+    elif 'inq' in dict_path:
+        dictionary = load_lemmatise_GI(dict_path)
+    elif 'OIL' in dict_path:
+        dictionary = load_lemmatise_Oil_Econ(dict_path)
     else:
-        dictionary = pd.read_excel(dict_path)
+        dictionary = None
+        print('error finding dictionary file')
 
     # Extract and normalize French terms once to reduce time complexity.
     terms_french = dictionary.iloc[:, 1].dropna().tolist()
@@ -49,7 +56,6 @@ def sentiment_analysis(corpus, dict_path, output_folder='output'):
 
     # Create dictionary of French words (key) and their corresponding sentiment score (value)
     french_sentiment = {terms_french[i]: sentiment_for_terms[i] for i in range(len(terms_french))}
-
     # Create a list to store sentiment scores and counts of positive and negative words
     time_series_data = []
 
@@ -108,21 +114,24 @@ def calculate_sentiment(tokens, fr_sentiment):
     negative_count = 0
     positive_words = []
     negative_words = []
-    for token in tokens:
-        # print(f"TOKEN: {token}")
-        # sentiment = "None" if no token found, otherwise "Negative"/"Positive"
-        sentiment = fr_sentiment.get(token, "None")
-        # update sentiment polarity counts
-        if sentiment == "Positive":
-            # print(f"{token} is positive")
-            positive_count += 1
-            positive_words.append(token)
-        elif sentiment == "Negative":
-            # print(f"{token} is negative")
-            negative_count += 1
-            negative_words.append(token)
-        elif sentiment != "None":
-            print("error accessing sentiment score in french_sentiment dictionary")
+    for group_size in range(1, 6):
+        # Iterate over the list of tokens in groups of 5
+        for token_group in zip(*[tokens[i:] for i in range(group_size)]):
+            token_phrase = " ".join(token_group)
+            # print(f"TOKEN: {token}")
+            # sentiment = "None" if no token found, otherwise "Negative"/"Positive"
+            sentiment = fr_sentiment.get(token_phrase, "None")
+            # update sentiment polarity counts
+            if sentiment == "Positive":
+                print(f"{token_group} is positive")
+                positive_count += 1
+                positive_words.append(token_phrase)
+            elif sentiment == "Negative":
+                print(f"{token_group} is negative")
+                negative_count += 1
+                negative_words.append(token_phrase)
+            elif sentiment != "None":
+                print("error accessing sentiment score in french_sentiment dictionary")
 
     # Calculate sentiment score as the difference between the number of positive and negative tokens, score will be
     # positive if more positive tokens and negative if more negative tokens.
@@ -182,7 +191,6 @@ dic_paths = [LM_pkl, FEEL_pkl, InqB, Oil, Lexicoder]
 
 for dict_path in dic_paths:
     corpus_with_sentiment = sentiment_analysis(corpus_data, dict_path)
-#show_SA(corpus_with_sentiment, dict_path)
 '''
 
 
