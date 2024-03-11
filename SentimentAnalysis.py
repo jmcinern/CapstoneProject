@@ -114,7 +114,7 @@ def calculate_sentiment(tokens, fr_sentiment):
     negative_count = 0
     positive_words = []
     negative_words = []
-    for group_size in range(1, 6):
+    for group_size in range(1, 4):
         # Iterate over the list of tokens in groups of 5
         for token_group in zip(*[tokens[i:] for i in range(group_size)]):
             token_phrase = " ".join(token_group)

@@ -3,12 +3,12 @@ import os
 import numpy as np
 
 # Create Returns Time Series
-def create_Returns_TS(fpath_returns):
+def create_financial_TS(fpath_returns):
 
     # Initialise TS and columns
     returns_TS = pd.read_excel(fpath_returns)
-    dates = []
     returns = []
+    volumes = []
 
     # function to get an array of dates in range passed as parram: start, end, YYYY-MM-DD
     dates = pd.date_range(start="2022-01-01", end="2023-12-31", normalize=True)
@@ -17,15 +17,23 @@ def create_Returns_TS(fpath_returns):
     for date in dates:
         if date.strftime('%Y-%m-%d') in returns_TS['Date'].dt.strftime('%Y-%m-%d').values:
             return_for_date = returns_TS.loc[returns_TS['Date'] == date, 'CAQ Daily Return'].iloc[0]
+            volume_for_date = returns_TS.loc[returns_TS['Date'] == date, 'Volume'].iloc[0]
+
             if pd.isna(return_for_date):
                 return_for_date = 0
+
+            if pd.isna(volume_for_date):
+                volume_for_date = 0
         else:
             return_for_date = 0
+            volume_for_date = 0
         returns.append(return_for_date)
+        volumes.append(volume_for_date)
 
     returns_TS = pd.DataFrame({
         'Date': dates,
-        'Return': returns
+        'Return': returns,
+        'Volume': volumes
     })
     return returns_TS
 
@@ -81,25 +89,7 @@ def get_dic_name(sentiment_dic_fpath):
     dic_name = split_dic_name[0]
     return dic_name
 
-# Run code
-# Returns
-returns_fpath = "./FinancialData/CAQReturns.xlsx"
-returns_TS = create_Returns_TS(returns_fpath)
 
-# Sentiment
-sentiment_fpaths = os.listdir("./output")
-sentiment_fpaths_output = []
-for fpath in sentiment_fpaths:
-    sentiment_fpaths_output.append("./output/"+fpath)
-
-sentiment_TS = create_Sentiment_TS(sentiment_fpaths_output)
-sentiment_TS['Returns'] = returns_TS['Return']
-sentiment_TS = sentiment_TS.fillna(0)
-
-# Selecting columns to include in the CSV file
-columns_to_include = ['Date'] + [col for col in sentiment_TS.columns if 'mean_' in col] + ['Returns']
-# Save DataFrame to CSV with selected columns
-sentiment_TS[columns_to_include].to_csv('TimeSeries.csv', index=False)
 
 
 

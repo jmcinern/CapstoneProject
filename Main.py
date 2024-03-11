@@ -2,7 +2,7 @@ import os
 from SentimentAnalysis import (sentiment_analysis,
                                load_create_corpus,
                                show_SA)
-from TimeSeries import(create_Returns_TS,
+from TimeSeries import(create_financial_TS,
                        create_Sentiment_TS)
 
 
@@ -23,8 +23,8 @@ for dict_path in dic_paths:
     show_SA(corpus_with_sentiment, dict_path)
 
 
-returns_fpath = "./FinancialData/CAQReturns.xlsx"
-returns_TS = create_Returns_TS(returns_fpath)
+financial_fpath = "./FinancialData/CAQReturns.xlsx"
+financial_TS = create_financial_TS(financial_fpath)
 
 # Sentiment
 sentiment_fpaths = os.listdir("./output")
@@ -33,11 +33,12 @@ for fpath in sentiment_fpaths:
     sentiment_fpaths_output.append("./output/"+fpath)
 
 sentiment_TS = create_Sentiment_TS(sentiment_fpaths_output)
-sentiment_TS['Returns'] = returns_TS['Return']
+sentiment_TS['Returns'] = financial_TS['Return']
+sentiment_TS['Volume'] = financial_TS['Volume']
 sentiment_TS = sentiment_TS.fillna(0)
 
 
 # Selecting columns to include in the CSV file
-columns_to_include = ['Date'] + [col for col in sentiment_TS.columns if 'mean_' in col] + ['Returns']
+columns_to_include = ['Date'] + [col for col in sentiment_TS.columns if 'mean_' in col] + ['Returns'] + ['Volume']
 # Save DataFrame to CSV with selected columns
 sentiment_TS[columns_to_include].to_csv('TimeSeries.csv', index=False)
