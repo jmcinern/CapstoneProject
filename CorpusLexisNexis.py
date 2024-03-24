@@ -129,8 +129,9 @@ class CorpusLexisNexis:
                     # Use continue key word to skip adding word Body to text list.
                     continue
                 if in_body:
-                    if line == 'End of Document':
-                        # It indicates the end of an article
+                    # the date the article was uploaded "load date" indicated the end of the article
+                    if line_index + 1 < num_lines and "Load-Date:" in lines[line_index+1]:
+                        # Only add unique articles with France related keywords in title.
                         if france_related_title and not duplicate_title:
                             #tokenize text when building corpus to avoid having to do it every time the SA is run
                             # Tokenize the text using spacy NLP model
@@ -144,6 +145,8 @@ class CorpusLexisNexis:
                                     #                   lemma: arrêter
                                     lemma = token.lemma_.lower()
                                     tokens.append(lemma)
+                            print(tokens)
+                            # Data frame object representation of article.
                             article = {
                                 "tokens": tokens,
                                 "title": title,
@@ -153,8 +156,7 @@ class CorpusLexisNexis:
                             }
                             articles.append(article)
                             france_related_title = False
-
-                        in_body = False
+                            in_body = False
                     else:
                         # Append lines to the text list if inside 'Body'
                         text.append(line)
