@@ -1,6 +1,5 @@
 import pandas as pd
-import os
-import numpy as np
+
 
 # Create Returns Time Series
 def create_financial_TS(fpath_returns):
@@ -54,12 +53,13 @@ def get_sentiment_by_country_group(dates, country_group):
     return dates_sentiment
 def create_Sentiment_TS(sentiment_fpaths):
     dates = pd.date_range(start="2022-01-01", end="2023-12-31", normalize=True)
+    article_lengths = []
     sentiment_TS = pd.DataFrame({'Date': dates})
+
     # Get columns dict and then country. Eg: sentiment_analysis_results_inquirerbasic_fr.xlsx.csv
     start_of_dic_pos = 1
     for sentiment_dic_fpath in sentiment_fpaths:
         sentiment_TS_for_dic = pd.read_csv(sentiment_dic_fpath)
-
         # Get name of dictionary from file name
         dic_name = get_dic_name(sentiment_dic_fpath)
 
@@ -82,6 +82,16 @@ def create_Sentiment_TS(sentiment_fpaths):
         start_of_dic_pos = start_of_dic_pos + num_countries
 
     return sentiment_TS
+
+
+# Function to exclude days where volume = 0.
+# 01/01/2022 - 31/12/2023, first column 'Dates'
+def exclude_no_volume(TS):
+    excluded_weekends_TS = TS[TS['Volume'] != 0]
+    # remove all rows if date is a weekend
+    return excluded_weekends_TS
+
+
 def get_dic_name(sentiment_dic_fpath):
     split_dicpath = sentiment_dic_fpath.split("/output/sentiment_analysis_results_")
     dicname_with_filetype = split_dicpath[1]

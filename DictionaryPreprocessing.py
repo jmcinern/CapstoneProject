@@ -100,6 +100,7 @@ def lemmatise_dic(dic_formatted, nlp):
 
         # Tokenise using spaCy
         term_tokenized = nlp(term)
+        #print(term_tokenized)
         if len(term_tokenized) < 6:
             french_term = []
             # lemmatise the single token, loop just to make sure that token is of type spaCy token
@@ -108,6 +109,7 @@ def lemmatise_dic(dic_formatted, nlp):
                 french_term.append(lemma)
             # join back multitoken terms
             french_term = " ".join(french_term)
+            #print(french_term)
             french_words_lemmatised.append(french_term)
         # remove terms of over 5 tokens from dictionary
         else:

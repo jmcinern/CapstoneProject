@@ -26,8 +26,39 @@ def load_create_corpus(corpus_data_file, data_repo):
     return corpus_data
 
 
-def sentiment_analysis(corpus, dict_path, output_folder='output'):
+# Function that outputs to csv file the proportion of positive, negative words over total words.
+def dictionary_comparision(term_sen, dictpath):
+    pos_count = 0
+    neg_count = 0
+    total_count = 0
 
+    directory = "dic_comparison"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    file_path = os.path.join(directory, dictpath)
+
+    with open(file_path, "w") as f:
+        for key, value in term_sen.items():
+        # count the number of positive  terms in the dictionary
+            if value == "Positive":
+                pos_count += 1
+                total_count += 1
+            elif value == "Negative":
+                neg_count += 1
+                total_count += 1
+            else:
+                total_count += 1
+        lines = [f"pos: {pos_count}\n", f"neg: {neg_count}\n", f"total: {total_count}\n"]
+        f.writelines(lines)
+
+
+
+
+
+
+def sentiment_analysis(corpus, dict_path, output_folder='output'):
+    print(dict_path)
     if 'Lough' in dict_path:
         dictionary = load_format_lemmatise_Loughran_McDonald_Dic(dict_path)
     elif 'FEEL' in dict_path:
@@ -56,7 +87,8 @@ def sentiment_analysis(corpus, dict_path, output_folder='output'):
 
     # Create dictionary of French words (key) and their corresponding sentiment score (value)
     french_sentiment = {terms_french[i]: sentiment_for_terms[i] for i in range(len(terms_french))}
-    # Create a list to store sentiment scores and counts of positive and negative words
+    #print(len(french_sentiment))
+    dictionary_comparision(french_sentiment, dict_path)
     time_series_data = []
 
 
@@ -74,7 +106,6 @@ def sentiment_analysis(corpus, dict_path, output_folder='output'):
 
             # Normalize sentiment scores by article length
             sentiment_normalized = sentiment_score / num_tokens
-
 
             # Append selected information to the time series data
             time_series_data.append({
@@ -100,8 +131,8 @@ def sentiment_analysis(corpus, dict_path, output_folder='output'):
     # Write the selected columns to a CSV file
     output_file_path = os.path.join(output_folder, f'sentiment_analysis_results_{os.path.basename(dict_path)}.csv')
     time_series_df.to_csv(output_file_path, index=False,
-                          columns=["Country", "Newspaper", "Title", "Sentiment", "Date", "Num_tokens", "Positive_count",
-                                   "Negative_count"],
+                          columns=["Country", "Newspaper", "Title", "Tokens", "Sentiment", "Date", "Num_tokens",
+                                   "Positive_count", "Negative_count"],
                           encoding='utf-8-sig')
 
     return corpus, time_series_data
@@ -114,7 +145,7 @@ def calculate_sentiment(tokens, fr_sentiment):
     negative_count = 0
     positive_words = []
     negative_words = []
-    for group_size in range(1, 4):
+    for group_size in range(1, 5):
         # Iterate over the list of tokens in groups of 5
         for token_group in zip(*[tokens[i:] for i in range(group_size)]):
             token_phrase = " ".join(token_group)
@@ -123,11 +154,11 @@ def calculate_sentiment(tokens, fr_sentiment):
             sentiment = fr_sentiment.get(token_phrase, "None")
             # update sentiment polarity counts
             if sentiment == "Positive":
-                print(f"{token_group} is positive")
+                # print(f"{token_group} is positive")
                 positive_count += 1
                 positive_words.append(token_phrase)
             elif sentiment == "Negative":
-                print(f"{token_group} is negative")
+                # print(f"{token_group} is negative")
                 negative_count += 1
                 negative_words.append(token_phrase)
             elif sentiment != "None":
@@ -135,7 +166,7 @@ def calculate_sentiment(tokens, fr_sentiment):
 
     # Calculate sentiment score as the difference between the number of positive and negative tokens, score will be
     # positive if more positive tokens and negative if more negative tokens.
-    sentiment_score = positive_count - negative_count
+    sentiment_score = negative_count
     # print(sentiment_score)
 
     return sentiment_score, positive_count, negative_count, positive_words, negative_words
@@ -194,5 +225,31 @@ for dict_path in dic_paths:
 '''
 
 
+def lex_financial_terms(lexicoder_dict_path, oil_dict_path, loughran_dict_path):
+    lexicoder_terms = load_format_lemmatise_lexicoder(lexicoder_dict_path)
+    oil_terms = load_lemmatise_Oil_Econ(oil_dict_path)
+    loughran_terms = load_format_lemmatise_Loughran_McDonald_Dic(loughran_dict_path)
+
+    lexicoder_term_set = set(lexicoder_terms.iloc[:, 1].dropna().str.lower())
+    oil_term_set = set(oil_terms.iloc[:, 1].dropna().str.lower())
+    loughran_term_set = set(loughran_terms.iloc[:, 1].dropna().str.lower())
+
+    terms_in_oil_or_loughran = lexicoder_term_set.intersection(oil_term_set.union(loughran_term_set))
+
+    proportion = len(terms_in_oil_or_loughran) / len(lexicoder_term_set)
+
+    # Optionally, you can create a list of terms that are found in either Oil or Loughran McDonald.
+    common_terms_list = list(terms_in_oil_or_loughran)
+
+    return proportion, common_terms_list
+
+# Example usage:
+lexicoder_dict_path = "lexicoder.pkl"
+oil_dict_path = "OIL_ECON_FR.xlsx"
+loughran_dict_path = "Loughran-McDonald.pkl"
+
+proportion, common_terms_list = lex_financial_terms(lexicoder_dict_path, oil_dict_path, loughran_dict_path)
+#print("Proportion of terms in Lexicoder present in Oil or Loughran McDonald:", proportion)
+#print("Common terms found in either Oil or Loughran McDonald:", common_terms_list)
 
 

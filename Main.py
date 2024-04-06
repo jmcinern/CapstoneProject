@@ -3,8 +3,7 @@ from SentimentAnalysis import (sentiment_analysis,
                                load_create_corpus,
                                show_SA)
 from TimeSeries import(create_financial_TS,
-                       create_Sentiment_TS)
-
+                       create_Sentiment_TS, exclude_no_volume)
 
 
 corpus_data_file = 'corpus_data.pkl'
@@ -16,7 +15,7 @@ FEEL_pkl = "FEEL.pkl"
 InqB = "inquirerbasic_fr.pkl"
 Oil = "OIL_ECON_FR.pkl"
 Lexicoder = "lexicoder.pkl"
-dic_paths = [Oil, InqB, FEEL_pkl, Lexicoder, LM_pkl]
+dic_paths = [LM_pkl, Lexicoder, Oil, FEEL_pkl, InqB]
 
 for dict_path in dic_paths:
     corpus_with_sentiment = sentiment_analysis(corpus_data, dict_path)
@@ -36,9 +35,15 @@ sentiment_TS = create_Sentiment_TS(sentiment_fpaths_output)
 sentiment_TS['Returns'] = financial_TS['Return']
 sentiment_TS['Volume'] = financial_TS['Volume']
 sentiment_TS = sentiment_TS.fillna(0)
+sentiment_TS = exclude_no_volume(sentiment_TS)
+# Remove first row of TS as not able to calculate first detrended volume as no previous volume.
+
 
 
 # Selecting columns to include in the CSV file
 columns_to_include = ['Date'] + [col for col in sentiment_TS.columns if 'mean_' in col] + ['Returns'] + ['Volume']
+# Rename sentiment columns for output
+
 # Save DataFrame to CSV with selected columns
 sentiment_TS[columns_to_include].to_csv('TimeSeries.csv', index=False)
+

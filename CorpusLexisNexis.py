@@ -80,16 +80,15 @@ class CorpusLexisNexis:
                 match = re.match(pattern, line)
                 if match:
                     num_tokens = int(match.group(1))
-
                 # Check if the line contains the name of any paper
                 if any(paper_name == line for paper_name in self.paper_names):
                     # Set the title as the line before the newspaper
                     title_index = max(0, line_index - 1)
                     title = lines[title_index].strip()
                     if title == "":
+                        print(title)
                         title_index = max(0, line_index - 2)
                         title = lines[title_index].strip()
-                        title_list.append(title)
                     newspaper = line
 
                     # Move to the next line to get the date
@@ -117,10 +116,12 @@ class CorpusLexisNexis:
                                                                  '%Y-%m-%d')
                         date = date_object.strftime('%d/%m/%Y')
 
+
                     # Check if any France-related word is present in the title
                     if any(word in title.lower() for word in france_related_words) and title not in title_list:
-                        france_related_title = True
-                        duplicate_title = False
+                            france_related_title = True
+                            duplicate_title = False
+
 
                 if line == 'Body':
                     # Initialize the text list for the article and set in_body to True
@@ -131,6 +132,7 @@ class CorpusLexisNexis:
                 if in_body:
                     # the date the article was uploaded "load date" indicated the end of the article
                     if line_index + 1 < num_lines and "Load-Date:" in lines[line_index+1]:
+                        title_list.append(title)
                         # Only add unique articles with France related keywords in title.
                         if france_related_title and not duplicate_title:
                             #tokenize text when building corpus to avoid having to do it every time the SA is run
@@ -145,7 +147,7 @@ class CorpusLexisNexis:
                                     #                   lemma: arrêter
                                     lemma = token.lemma_.lower()
                                     tokens.append(lemma)
-                            print(tokens)
+                            # print(tokens)
                             # Data frame object representation of article.
                             article = {
                                 "tokens": tokens,
@@ -154,7 +156,8 @@ class CorpusLexisNexis:
                                 "date": date,
                                 "num_tokens": num_tokens,
                             }
-                            articles.append(article)
+                            if num_tokens<2500:
+                                articles.append(article)
                             france_related_title = False
                             in_body = False
                     else:
@@ -170,6 +173,7 @@ class CorpusLexisNexis:
         for fn in file_names:
             country_paper = fn.split("_")
             country = country_paper[0]
+            print(country)
             articles = self._files_to_corpus(fn, nlp)
             # If the country key already exists in the corpus, append the articles to the existing list
             if country in corpus:
