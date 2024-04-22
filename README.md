@@ -3,6 +3,7 @@ This repository is the code used for the completion of my final year project. Th
 
 
 Abstract of thesis:
+
 This project investigates the relationship between sentiment expressed in news media from
 Francophone Africa towards France and its impact on the French stock market.
 
@@ -19,8 +20,6 @@ The negative sentiment measurements of each lexicon were compared, and it was fo
 that the lexicons designed for analysing financial media appear to be more appropriate in de-
 tecting a relationship between the negative sentiment news media proxies and financial market
 proxies.
-ii
-
 
 - DATA: stores files of news articles downloaded from LexisNexis.
 - Dictionaries: Stores the sentiment lexicon used for reference in sentiment analysis.
