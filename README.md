@@ -3,10 +3,24 @@ This repository is the code used for the completion of my final year project. Th
 
 
 Abstract of thesis:
-This thesis investigates the relationship between sentiment expressed in news media from Francophone Africa towards France and its impact on the French stock market. 
-A French language corpus of 1,678,267 words across 52 newspapers and 23 countries was collected and constructed. The negative sentiment of these articles over the time span 2022-2023 was measured. 5 different sentiment lexicons were used to compare their negative measurement's impact on the French stock market.\\~\\
-Financial data from the CAQ 40 stock index was also collected and the impact of the negative sentiment towards France from these newspapers was statistically evaluated using vector autoregression.
-The project is ran in the main.py, which runs the other relevant classes.
+This project investigates the relationship between sentiment expressed in news media from
+Francophone Africa towards France and its impact on the French stock market.
+
+A French language corpus of 1,678,267 words across 52 newspapers and 23 countries was
+collected and constructed. The negative sentiment of these articles was measured over the
+time span 2022-2023. 5 different sentiment lexicons were used to compare their negative
+sentiment measurement’s impact on the French stock market.
+
+Financial data from the CAC 40 French financial index was also collected, and the impact of
+the negative sentiment on the financial market was statistically evaluated using multivariate
+vector autoregressive econometric models.
+
+The negative sentiment measurements of each lexicon were compared, and it was found
+that the lexicons designed for analysing financial media appear to be more appropriate in de-
+tecting a relationship between the negative sentiment news media proxies and financial market
+proxies.
+ii
+
 
 - DATA: stores files of news articles downloaded from LexisNexis.
 - Dictionaries: Stores the sentiment lexicon used for reference in sentiment analysis.
